@@ -52,14 +52,7 @@ class ChangeIconModule(reactContext: ReactApplicationContext, private val packag
 
   private fun completeIconChange() {
 
-    // enable old icon
     val manager: PackageManager = this.reactApplicationContext.packageManager;
-    manager.setComponentEnabledSetting(
-      ComponentName(this.reactApplicationContext, componentClass),
-      PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-      PackageManager.DONT_KILL_APP
-    )
-
 
     // enable new icon
     manager.setComponentEnabledSetting(
@@ -67,6 +60,14 @@ class ChangeIconModule(reactContext: ReactApplicationContext, private val packag
       PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
       PackageManager.DONT_KILL_APP
     )
+
+    // disable old icon
+    manager.setComponentEnabledSetting(
+      ComponentName(this.reactApplicationContext, componentClass),
+      PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+      PackageManager.DONT_KILL_APP
+    )
+    
   }
 
   override fun onActivityPaused(activity: Activity) {
