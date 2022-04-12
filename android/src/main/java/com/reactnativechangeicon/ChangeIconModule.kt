@@ -2,90 +2,92 @@ package com.reactnativechangeicon
 
 import android.app.Activity
 import android.app.Application
-import android.content.pm.PackageManager
 import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.os.Bundle
-
+import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.Promise
 
-class ChangeIconModule(reactContext: ReactApplicationContext, private val packageName: String) : ReactContextBaseJavaModule(reactContext), Application.ActivityLifecycleCallbacks {
-    private var classesToKill: MutableList<String> = mutableListOf<String>()
-    private var iconChanged: Boolean = false;
-    private var componentClass: String = ""
-    override fun getName(): String {
-        return "ChangeIcon"
+import android.util.Log
+
+
+class ChangeIconModule(reactContext: ReactApplicationContext, private val packageName: String) :
+  ReactContextBaseJavaModule(reactContext), Application.ActivityLifecycleCallbacks {
+  private var classesToKill: MutableList<String> = mutableListOf<String>()
+  private var iconChanged: Boolean = false;
+  private var componentClass: String = ""
+  private var iconNameToEnable: String = ""
+
+
+  override fun getName(): String {
+    return "ChangeIcon"
+  }
+
+  @ReactMethod
+  fun changeIcon(enableIcon: String, promise: Promise) {
+    val activity: Activity? = currentActivity
+    if (activity == null || enableIcon.isEmpty()) {
+      promise.reject("Icon string is empty.")
+      return
     }
 
-    @ReactMethod
-    fun changeIcon(enableIcon: String, promise: Promise) {
-        val activity: Activity? = currentActivity
-        if (activity == null || enableIcon.isEmpty()) {
-            promise.reject("Icon string is empty.")
-            return
-        }
-        if (componentClass.isEmpty()) componentClass = activity.componentName.className
-        val activeClass = "$packageName.MainActivity$enableIcon"
-        if (componentClass == activeClass) {
-            promise.reject("Icon already in use.")
-            return
-        }
-        try {
-            activity.packageManager.setComponentEnabledSetting(
-                ComponentName(packageName, activeClass),
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                PackageManager.DONT_KILL_APP
-            )
-            promise.resolve(true)
-        } catch (e: Exception) {
-            promise.reject("Invalid Icon")
-            return
-        }
-        classesToKill.add(componentClass)
-        componentClass = activeClass
-        activity.application.registerActivityLifecycleCallbacks(this)
-        iconChanged = true;
+    if (componentClass.isEmpty())
+      componentClass = activity.componentName.className
+
+    val activeClass = "$packageName.MainActivity$enableIcon"
+
+    if (componentClass == activeClass) {
+      promise.reject("Icon already in use.")
+      return
     }
 
-    private fun completeIconChange() {
-        if (iconChanged) {
-          val activity: Activity? = currentActivity
-          if (activity == null) {
-            return
-          }
-          classesToKill.forEach {
-            activity.packageManager.setComponentEnabledSetting(
-                ComponentName(packageName, it),
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                PackageManager.DONT_KILL_APP
-            )
-          }
-          classesToKill.clear()
-          iconChanged = false;
-        }
-    }
+    iconNameToEnable = enableIcon;
 
-    override fun onActivityPaused(activity: Activity) {
-        completeIconChange();
-    }
+    activity.application.registerActivityLifecycleCallbacks(this)
+    promise.resolve(true)
 
-    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-    }
+  }
 
-    override fun onActivityStarted(activity: Activity) {
-    }
+  private fun completeIconChange() {
 
-    override fun onActivityResumed(activity: Activity) {
-    }
+    // enable old icon
+    val manager: PackageManager = this.reactApplicationContext.packageManager;
+    manager.setComponentEnabledSetting(
+      ComponentName(this.reactApplicationContext, componentClass),
+      PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+      PackageManager.DONT_KILL_APP
+    )
 
-    override fun onActivityStopped(activity: Activity) {
-    }
 
-    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
-    }
+    // enable new icon
+    manager.setComponentEnabledSetting(
+      ComponentName(this.reactApplicationContext, "albert.health.MainActivity$iconNameToEnable"),
+      PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+      PackageManager.DONT_KILL_APP
+    )
+  }
 
-    override fun onActivityDestroyed(activity: Activity) {
-    }
+  override fun onActivityPaused(activity: Activity) {
+  }
+
+  override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+  }
+
+  override fun onActivityStarted(activity: Activity) {
+  }
+
+  override fun onActivityResumed(activity: Activity) {
+  }
+
+  override fun onActivityStopped(activity: Activity) {
+    completeIconChange();
+  }
+
+  override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
+  }
+
+  override fun onActivityDestroyed(activity: Activity) {
+  }
 }
